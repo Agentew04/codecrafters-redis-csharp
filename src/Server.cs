@@ -11,14 +11,18 @@ Console.WriteLine("Logs from your program will appear here!");
 // Uncomment this block to pass the first stage
 TcpListener server = new TcpListener(IPAddress.Any, PORT);
 server.Start();
-TcpClient client = await server.AcceptTcpClientAsync(); // wait for client
+Socket socket = await server.AcceptSocketAsync();
 
-var ns = client.GetStream();
-StreamReader sr = new(ns, Encoding.ASCII);
-StreamWriter sw = new(ns, Encoding.ASCII);
+while (true) {
+    byte[] buffer = new byte[1024];
+    var received = await socket.ReceiveAsync(buffer, SocketFlags.None);
 
-var request = sr.ReadToEnd(); // read the client's request
+    string msg = Encoding.ASCII.GetString(buffer, 0, received);
+    if(msg.Length == 0) {
+        Console.WriteLine("Client ended conn");
+        break;
+    }
 
-foreach(var req in request.Split("\r\n")) {
-    sw.WriteLine(PING_RESPONSE);
+    await socket.SendAsync(Encoding.ASCII.GetBytes(PING_RESPONSE), SocketFlags.None);
+
 }
