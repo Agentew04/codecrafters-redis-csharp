@@ -2,27 +2,45 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
-const int PORT = 6379;
-const string PING_RESPONSE = "+PONG\r\n";
+namespace CodeCrafters.Redis;
 
-// You can use print statements as follows for debugging, they'll be visible when running tests.
-Console.WriteLine("Logs from your program will appear here!");
+public class Server {
+    const int PORT = 6379;
+    const string PING_RESPONSE = "+PONG\r\n";
 
-// Uncomment this block to pass the first stage
-TcpListener server = new TcpListener(IPAddress.Any, PORT);
-server.Start();
-Socket socket = await server.AcceptSocketAsync();
+    public static async Task Main() {
+        Console.WriteLine("Logs from your program will appear here!");
 
-while (true) {
-    byte[] buffer = new byte[1024];
-    var received = await socket.ReceiveAsync(buffer, SocketFlags.None);
+        TcpListener server = new TcpListener(IPAddress.Any, PORT);
+        server.Start();
 
-    string msg = Encoding.ASCII.GetString(buffer, 0, received);
-    if(msg.Length == 0) {
-        Console.WriteLine("Client ended conn");
-        break;
+        while (true) {
+            await Console.Out.WriteLineAsync("waiting new client");
+            TcpClient client = server.AcceptTcpClient(); // blockng
+            await Console.Out.WriteLineAsync("new conn received. handling");
+            HandleClient(client);
+        }
     }
 
-    await socket.SendAsync(Encoding.ASCII.GetBytes(PING_RESPONSE), SocketFlags.None);
+    public static async Task HandleClient(TcpClient client) {
+        using NetworkStream stream = client.GetStream();
 
+        using StreamReader sr = new(stream, Encoding.ASCII);
+        using StreamWriter sw = new(stream, Encoding.ASCII);
+
+        while (true) {
+            var input = await sr.ReadLineAsync();
+            await Console.Out.WriteLineAsync("input "+input);
+            if (input.Length == 0) {
+                await Console.Out.WriteLineAsync("finish conn");
+                break;
+            }
+
+            await Console.Out.WriteLineAsync("sending pong");
+            await sw.WriteAsync(PING_RESPONSE);
+            sw.Flush();
+        }
+
+        client.Dispose();
+    }
 }
