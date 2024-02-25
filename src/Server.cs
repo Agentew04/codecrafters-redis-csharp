@@ -29,7 +29,7 @@ public class Server {
         using StreamWriter sw = new(stream, Encoding.ASCII);
 
         while (true) {
-            var input = await sr.ReadLineAsync();
+            var input = await sr.ReadToEndAsync();
             await Console.Out.WriteLineAsync("input "+input);
             if (input.Length == 0) {
                 await Console.Out.WriteLineAsync("finish conn");
