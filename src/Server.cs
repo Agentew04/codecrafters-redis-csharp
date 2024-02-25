@@ -11,6 +11,14 @@ Console.WriteLine("Logs from your program will appear here!");
 // Uncomment this block to pass the first stage
 TcpListener server = new TcpListener(IPAddress.Any, PORT);
 server.Start();
-Socket socket = server.AcceptSocket(); // wait for client
+TcpClient client = await server.AcceptTcpClientAsync(); // wait for client
 
-socket.Send(Encoding.ASCII.GetBytes(PING_RESPONSE));
+var ns = client.GetStream();
+StreamReader sr = new(ns, Encoding.ASCII);
+StreamWriter sw = new(ns, Encoding.ASCII);
+
+var request = sr.ReadToEnd(); // read the client's request
+
+foreach(var req in request.Split("\r\n")) {
+    sw.WriteLine(PING_RESPONSE);
+}
