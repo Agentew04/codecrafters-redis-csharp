@@ -25,22 +25,26 @@ public class Server {
     public static async Task HandleClient(TcpClient client) {
         using NetworkStream stream = client.GetStream();
 
-        using StreamReader sr = new(stream, Encoding.ASCII);
-        using StreamWriter sw = new(stream, Encoding.ASCII);
+        byte[] buffer = new byte[1024];
 
-        while (true) {
-            var input = await sr.ReadToEndAsync();
-            await Console.Out.WriteLineAsync("input "+input);
-            if (input.Length == 0) {
-                await Console.Out.WriteLineAsync("finish conn");
+        int bytesRead;
+        do {
+            bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+
+            string request = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+            await Console.Out.WriteLineAsync($"Received: {request}");
+
+            if (request.Length == 0) {
+                await Console.Out.WriteLineAsync("end conn");
                 break;
             }
 
-            await Console.Out.WriteLineAsync("sending pong");
-            await sw.WriteAsync(PING_RESPONSE);
-            sw.Flush();
-        }
-
-        client.Dispose();
+            //if (request == "PING\r\n") {
+            byte[] response = Encoding.UTF8.GetBytes(PING_RESPONSE);
+            await stream.WriteAsync(response, 0, response.Length);
+            await Console.Out.WriteLineAsync($"Sent: {PING_RESPONSE}");
+            //}
+        }while(bytesRead > 0);
+        client.Close();
     }
 }
