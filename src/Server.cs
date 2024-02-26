@@ -219,17 +219,19 @@ public static partial class Server {
 
         // receive rdb file
         bytesRead = await stream.ReadAsync(buffer);
-        await Console.Out.WriteLineAsync($"received rdb file, size: {bytesRead}");
-        response = buffer[..bytesRead];
-        Console.WriteLine($"response size: {response.Length}");
-        //respToken = RespToken.Parse(response, out _);
-        //if (respToken is not FileToken fileToken) {
-        //    await Console.Out.WriteLineAsync($"is not file token! type: {respToken.GetType().Name}");
-        //    return;
-        //}
+        if(bytesRead > 0) {
+            await Console.Out.WriteLineAsync($"received rdb file, size: {bytesRead}");
+            response = buffer[..bytesRead];
+            Console.WriteLine($"response size: {response.Length}");
+            respToken = RespToken.Parse(response, out _);
+            if (respToken is not FileToken fileToken) {
+                await Console.Out.WriteLineAsync($"is not file token! type: {respToken.GetType().Name}");
+                return;
+            }
 
-        //Rdb.SaveFile(fileToken.Content);
-            
+            Rdb.SaveFile(fileToken.Content);
+        }
+
         // send connection to main handler loop
         await Console.Out.WriteLineAsync("Sending master connection to Handler");
         HandleMaster(tcpClient); // do not await
