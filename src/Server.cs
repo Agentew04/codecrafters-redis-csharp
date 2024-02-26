@@ -15,7 +15,16 @@ public static class Server {
     const string PING_RESPONSE = "+PONG\r\n";
 
     public static async Task Main(string[] args) {
-        int port = int.Parse(args[args.ToList().IndexOf("--port")+1]);
+        int port = 6379; // default value
+        int portTagIndex = Array.IndexOf(args, "--port");
+        // has specific port
+        if(portTagIndex != -1) {
+            try {
+                port = int.Parse(args[portTagIndex + 1]);
+            } catch {
+                port = 6379;
+            }
+        }
 
         TcpListener server = new TcpListener(IPAddress.Any, port);
         server.Start();
