@@ -125,6 +125,7 @@ public static partial class Server {
     }
 
     private static async Task HandshakeMaster() {
+        await Console.Out.WriteLineAsync("Starting handshake with master");
         TcpClient tcpClient = new(masterHost, masterPort);
         NetworkStream stream = tcpClient.GetStream();
 
@@ -132,6 +133,7 @@ public static partial class Server {
         ArrayToken request = new();
         request.Tokens.Add(BulkStringToken.FromString("PING"));
         request.Count = 1;
+        await Console.Out.WriteLineAsync("Sending ping");
         await stream.WriteAsync(request);
 
         // receive pong
@@ -145,6 +147,7 @@ public static partial class Server {
         if (simpleStringToken.Value != "PONG") {
             throw new InvalidOperationException("Invalid response from master");
         }
+        await Console.Out.WriteLineAsync("Received pong");
 
 
         // send replconf 1
@@ -153,6 +156,7 @@ public static partial class Server {
         request.Tokens.Add(BulkStringToken.FromString("listening-port"));
         request.Tokens.Add(BulkStringToken.FromString(port.ToString()));
         request.Count = 3;
+        await Console.Out.WriteLineAsync("send replconf listening-port");
         await stream.WriteAsync(request);
 
         // receive OK
@@ -165,6 +169,7 @@ public static partial class Server {
         if (simpleStringToken2.Value != "OK") {
             throw new InvalidOperationException("Invalid response from master");
         }
+        await Console.Out.WriteLineAsync("received ok");
 
         // send replconf 2
         request = new();
@@ -172,6 +177,7 @@ public static partial class Server {
         request.Tokens.Add(BulkStringToken.FromString("capa"));
         request.Tokens.Add(BulkStringToken.FromString("psync2"));
         request.Count = 3;
+        await Console.Out.WriteLineAsync("sending replconf capa");
         await stream.WriteAsync(request);
 
         // receive OK
@@ -184,6 +190,7 @@ public static partial class Server {
         if (simpleStringToken3.Value != "OK") {
             throw new InvalidOperationException("Invalid response from master");
         }
+        await Console.Out.WriteLineAsync("received ok");
 
         // send psync
         request = new();
@@ -191,6 +198,7 @@ public static partial class Server {
         request.Tokens.Add(BulkStringToken.FromString("?"));
         request.Tokens.Add(BulkStringToken.FromString("-1"));
         request.Count = 3;
+        await Console.Out.WriteLineAsync("sending psync");
         await stream.WriteAsync(request);
 
         // receive fullresync
@@ -204,10 +212,12 @@ public static partial class Server {
             throw new InvalidOperationException("Invalid response from master");
         }
         masterReplId = simpleStringToken4.Value.Split(' ')[1];
+        await Console.Out.WriteLineAsync($"received fullresync, replid: {masterReplId}");
 
         // receive RDB file
-
+        Console.WriteLine("expecting rdb file");
         bytesRead = await stream.ReadAsync(buffer);
+        await Console.Out.WriteLineAsync("rdb received");
         response = buffer[..bytesRead];
         respToken = RespToken.Parse(response, out _);
         if (respToken is not FileToken fileToken) {
@@ -219,7 +229,7 @@ public static partial class Server {
 
         // send connection to main handler loop
         await Console.Out.WriteLineAsync("Sending master connection to Handler");
-        HandleMaster(tcpClient);
+        HandleMaster(tcpClient); // do not await
     }
 
     private static async Task HandleMaster(TcpClient client) {
