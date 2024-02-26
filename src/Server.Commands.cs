@@ -87,10 +87,11 @@ public static partial class Server {
             response = new NullBulkString();
         }
 
+        await Console.Out.WriteLineAsync($"Sending: {response.GetType().Name}");
         await stream.WriteAsync(response);
     }
 
-    private static async Task SetCommand(NetworkStream stream, List<string> args, bool isMasterConnection) {
+    private static async Task SetCommand(NetworkStream stream, List<string> args, bool respond = true) {
         string key = args[1];
         string value = args[2];
         string? px = args.Count > 3 ? args[3] : null;
@@ -107,11 +108,11 @@ public static partial class Server {
             Value = "OK"
         };
 
-        if (!isMasterConnection) {
-            await Console.Out.WriteLineAsync("This is not master connection. responding");
+        if (respond) {
+            await Console.Out.WriteLineAsync("Responding to request");
             await stream.WriteAsync(response);
         } else {
-            await Console.Out.WriteLineAsync("This IS master connection, not sending response");
+            await Console.Out.WriteLineAsync("Not responding to request");
         }
     }
 
