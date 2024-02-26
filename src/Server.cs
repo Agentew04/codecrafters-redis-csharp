@@ -100,15 +100,20 @@ public static class Server {
 
         await Console.Out.WriteLineAsync($"Value: {value}; Expiry: {(expiry.HasValue ? expiry.Value : "null")}");
 
+        await Console.Out.WriteLineAsync($"NowTicks: {DateTime.Now.Ticks} ExpiryTicks: {(expiry.HasValue ? expiry.Value.Ticks : "null")} " +
+            $"Diff: {(expiry.HasValue ? expiry.Value.Ticks : 0) - DateTime.Now.Ticks}");
+
         // does not have expiry, get data
-        if(expiry is null) {
+        if (!expiry.HasValue) {
+            await Console.Out.WriteLineAsync("Expiry not found. Retrieving data");
             response = new BulkStringToken() {
                 Length = value.Length,
                 Value = value
             };
         }
         // has expiry, is not expired, get data
-        else if(expiry <= DateTime.Now) {
+        else if((expiry.Value.Ticks - DateTime.Now.Ticks > 0) ) {
+            await Console.Out.WriteLineAsync("Expiry found. Not expired yet. retrieving data");
             response = new BulkStringToken() {
                 Length = value.Length,
                 Value = value
@@ -116,12 +121,13 @@ public static class Server {
         }
         // has expiry, is expired, set null bulk string
         else {
+            await Console.Out.WriteLineAsync("Expiry found. The diff was negative, was expired. issuing nullbulk");
             response = new NullBulkString();
         }
         
         byte[] responseBytes = Encoding.UTF8.GetBytes(response.ToRESP());
         await stream.WriteAsync(responseBytes);
-        await Console.Out.WriteLineAsync("Sent ok from set");
+        await Console.Out.WriteLineAsync("Sent data from get");
     }
 
     private static async Task SetCommand(NetworkStream stream, List<string> args) {
