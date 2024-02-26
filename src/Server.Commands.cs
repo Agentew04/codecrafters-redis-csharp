@@ -14,12 +14,16 @@ public static partial class Server {
         string replid = args[1];
         long offset = long.Parse(args[2]);
 
-        SimpleStringToken response = new() {
+        RespToken response = new SimpleStringToken() {
             Value = $"FULLRESYNC {masterReplId} 0"
         };
         await stream.WriteAsync(response);
 
-        await stream.WriteAsync(Rdb.EmptyFile);
+        response = new FileToken() {
+            Content = Rdb.EmptyFile,
+            Length = Rdb.EmptyFile.Length
+        };
+        await stream.WriteAsync(response);
     }
 
     private static async Task ReplConfCommand(NetworkStream stream, List<string> args) {
