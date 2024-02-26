@@ -13,7 +13,7 @@ public static partial class Server {
 
     public static async Task Main(string[] args) {
         ParseFlags(args);
-        Setup();
+        await Setup();
         
         TcpListener server = new TcpListener(IPAddress.Any, port);
         server.Start();
@@ -203,12 +203,16 @@ public static partial class Server {
 
         // receive fullresync
         bytesRead = await stream.ReadAsync(buffer);
+        await Console.Out.WriteLineAsync($"Received fullresync, size: {bytesRead}");
         response = buffer[..bytesRead];
         respToken = RespToken.Parse(response, out int resyncEnd);
+        await Console.Out.WriteLineAsync($"Resync parsed, ends in {resyncEnd}");
         if (respToken is not SimpleStringToken simpleStringToken4) {
+            await Console.Out.WriteLineAsync("Response is not simple string");
             throw new InvalidOperationException("Invalid response from master");
         }
         if (!simpleStringToken4.Value.StartsWith("FULLRESYNC")) {
+            await Console.Out.WriteLineAsync("Response is not FULLRESYNC");
             throw new InvalidOperationException("Invalid response from master");
         }
         masterReplId = simpleStringToken4.Value.Split(' ')[1];
