@@ -218,7 +218,9 @@ public static partial class Server {
 
         // receive rdb file
         bytesRead = await stream.ReadAsync(buffer);
+        await Console.Out.WriteLineAsync($"received rdb file, size: {bytesRead}");
         response = buffer[..bytesRead];
+        Console.WriteLine($"response size: {response.Length}");
         respToken = RespToken.Parse(response, out _);
         if (respToken is not FileToken fileToken) {
             await Console.Out.WriteLineAsync($"is not file token! type: {respToken.GetType().Name}");
