@@ -8,6 +8,9 @@ using System.Text.RegularExpressions;
 namespace codecrafters_redis.src;
 
 public static class Server {
+
+    private static readonly Dictionary<string, string> _data = new();
+
     const string CRLF = "\r\n";
     const int PORT = 6379;
     const string PING_RESPONSE = "+PONG\r\n";
@@ -48,32 +51,70 @@ public static class Server {
 
             var reqToken = RespToken.Parse(request, out _);
 
-            if(reqToken is ArrayToken arrayToken) {
-                await Console.Out.WriteAsync($"Array Items: ");
-
-                arrayToken.Tokens.Where(t => t is BulkStringToken)
-                    .Cast<BulkStringToken>()
-                    .ToList()
-                    .ForEach(t => Console.Write(t.Value+"; "));
-                Console.WriteLine();
-
-                var cmd = ((BulkStringToken)arrayToken.Tokens[0]).Value;
-                await Console.Out.WriteLineAsync($"Command: {cmd}");
-                if (cmd == "ping") {
-                    byte[] response = Encoding.UTF8.GetBytes(PING_RESPONSE);
-                    await stream.WriteAsync(response, 0, response.Length);
-                    await Console.Out.WriteLineAsync($"Sent: {PING_RESPONSE}");
-                }else if(cmd == "echo") {
-                    BulkStringToken echoContentToken = (BulkStringToken)arrayToken.Tokens[1];
-                    byte[] response = Encoding.UTF8.GetBytes(echoContentToken.ToRESP());
-                    await stream.WriteAsync(response);
-                    await Console.Out.WriteLineAsync($"Sent: {echoContentToken.Value}");
-                }
-            } else {
+            if(reqToken is not ArrayToken arrayToken) {
                 await Console.Out.WriteLineAsync("req is not array");
+                continue;
             }
-        }while(bytesRead > 0);
+
+            // print array items for debug
+            await Console.Out.WriteAsync($"Array Items: ");
+            arrayToken.Tokens.Where(t => t is BulkStringToken)
+                .Cast<BulkStringToken>()
+                .ToList()
+                .ForEach(t => Console.Write(t.Value+"; "));
+            Console.WriteLine();
+
+            var cmd = ((BulkStringToken)arrayToken.Tokens[0]).Value;
+            await Console.Out.WriteLineAsync($"Command: {cmd}");
+            if (cmd == "ping") {
+                await PingCommand(stream);
+            } else if(cmd == "echo") {
+                await EchoCommand(stream, arrayToken);
+            }else if(cmd == "set") {
+                await SetCommand(stream, arrayToken);
+            } else if(cmd == "get") {
+                await GetCommand(stream, arrayToken);
+            }
+        } while(bytesRead > 0);
         client.Close();
     }
 
+    private static async Task GetCommand(NetworkStream stream, ArrayToken arrayToken) {
+        string key = ((BulkStringToken)arrayToken.Tokens[1]).Value;
+        await Console.Out.WriteLineAsync($"GET {key}");
+        string value = _data[key];
+        BulkStringToken response = new() {
+            Length = value.Length,
+            Value = value
+        };
+        byte[] responseBytes = Encoding.UTF8.GetBytes(response.ToRESP());
+        await stream.WriteAsync(responseBytes);
+        await Console.Out.WriteLineAsync("Sent ok from set");
+    }
+
+    private static async Task SetCommand(NetworkStream stream, ArrayToken arrayToken) {
+        string key = ((BulkStringToken)arrayToken.Tokens[1]).Value;
+        string value = ((BulkStringToken)arrayToken.Tokens[2]).Value;
+        await Console.Out.WriteLineAsync($"SET {key}: {value}");
+        _data[key] = value;
+        SimpleStringToken response = new() {
+            Value = "OK"
+        };
+        byte[] responseBytes = Encoding.UTF8.GetBytes(response.ToRESP());
+        await stream.WriteAsync(responseBytes);
+        await Console.Out.WriteLineAsync("Sent ok from set");
+    }
+
+    private static async Task EchoCommand(NetworkStream stream, ArrayToken arrayToken) {
+        BulkStringToken echoContentToken = (BulkStringToken)arrayToken.Tokens[1];
+        byte[] response = Encoding.UTF8.GetBytes(echoContentToken.ToRESP());
+        await stream.WriteAsync(response);
+        await Console.Out.WriteLineAsync($"Sent: {echoContentToken.Value}");
+    }
+
+    private static async Task PingCommand(NetworkStream stream) {
+        byte[] response = Encoding.UTF8.GetBytes(PING_RESPONSE);
+        await stream.WriteAsync(response, 0, response.Length);
+        await Console.Out.WriteLineAsync($"Sent: {PING_RESPONSE}");
+    }
 }
