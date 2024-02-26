@@ -26,7 +26,7 @@ public static partial class Server {
         }
     }
 
-    public static async Task HandleClient(TcpClient client) {
+    public static async Task HandleClient(TcpClient client, bool isMasterConnection = false) {
         using NetworkStream stream = client.GetStream();
 
         byte[] buffer = new byte[1024];
@@ -59,10 +59,10 @@ public static partial class Server {
             } else if(cmd == "echo") {
                 await EchoCommand(stream, args);
             } else if(cmd == "set") {
-                await SetCommand(stream, args);
+                await SetCommand(stream, args, isMasterConnection);
                 await SendCommandToReplicas(request);
             } else if(cmd == "get") {
-                await GetCommand(stream, args);
+                await GetCommand(stream, args, isMasterConnection);
                 await SendCommandToReplicas(request);
             } else if (cmd == "info") {
                 await InfoCommand(stream, args);
@@ -216,10 +216,13 @@ public static partial class Server {
         await Rdb.SaveFile(fileToken.Content);
 
         // send connection to main handler loop
-        HandleClient(tcpClient);
+        HandleClient(tcpClient, true);
     }
 
     private static async Task SendCommandToReplicas(byte[] args) {
+        if (!isMaster) {
+            return;
+        }
         foreach (var replica in replicaStreams) {
             await replica.WriteAsync(args);
         }

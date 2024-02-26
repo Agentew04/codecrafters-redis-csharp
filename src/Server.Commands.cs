@@ -62,7 +62,7 @@ public static partial class Server {
         await stream.WriteAsync(response);
     }
 
-    private static async Task GetCommand(NetworkStream stream, List<string> args) {
+    private static async Task GetCommand(NetworkStream stream, List<string> args, bool isMasterConnection) {
         string key = args[1];
         await Console.Out.WriteLineAsync($"GET {key}");
         (string value, DateTime? expiry) = _data[key];
@@ -87,12 +87,12 @@ public static partial class Server {
             response = new NullBulkString();
         }
 
-        if (isMaster) {
+        if (!isMasterConnection) {
             await stream.WriteAsync(response);
         }
     }
 
-    private static async Task SetCommand(NetworkStream stream, List<string> args) {
+    private static async Task SetCommand(NetworkStream stream, List<string> args, bool isMasterConnection) {
         string key = args[1];
         string value = args[2];
         string? px = args.Count > 3 ? args[3] : null;
@@ -109,7 +109,7 @@ public static partial class Server {
             Value = "OK"
         };
 
-        if (isMaster) {
+        if (!isMasterConnection) {
             await stream.WriteAsync(response);
         }
     }
