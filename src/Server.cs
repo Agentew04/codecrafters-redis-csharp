@@ -203,10 +203,8 @@ public static partial class Server {
 
         // receive fullresync
         bytesRead = await stream.ReadAsync(buffer);
-        await Console.Out.WriteLineAsync($"Received fullresync, size: {bytesRead}");
         response = buffer[..bytesRead];
-        respToken = RespToken.Parse(response, out int resyncEnd);
-        await Console.Out.WriteLineAsync($"Resync parsed, ends in {resyncEnd}");
+        respToken = RespToken.Parse(response, out _);
         if (respToken is not SimpleStringToken simpleStringToken4) {
             await Console.Out.WriteLineAsync("Response is not simple string");
             throw new InvalidOperationException("Invalid response from master");
@@ -218,8 +216,10 @@ public static partial class Server {
         masterReplId = simpleStringToken4.Value.Split(' ')[1];
         await Console.Out.WriteLineAsync($"received fullresync, replid: {masterReplId}");
 
-        // extract rdb file from previous request
-        respToken = RespToken.Parse(response[resyncEnd..], out _);
+        // receive rdb file
+        bytesRead = await stream.ReadAsync(buffer);
+        response = buffer[..bytesRead];
+        respToken = RespToken.Parse(response, out _);
         if (respToken is not FileToken fileToken) {
             await Console.Out.WriteLineAsync($"is not file token! type: {respToken.GetType().Name}");
             return;
