@@ -12,23 +12,19 @@ public static class Server {
 
     private static readonly Dictionary<string, (string value, DateTime? expiry)> _data = new();
 
-    const string CRLF = "\r\n";
-    const int PORT = 6379;
     const string PING_RESPONSE = "+PONG\r\n";
 
-    public static async Task Main() {
-        Console.WriteLine("Logs from your program will appear here!");
+    public static async Task Main(string[] args) {
+        int port = int.Parse(args[args.ToList().IndexOf("--port")+1]);
 
-        TcpListener server = new TcpListener(IPAddress.Any, PORT);
+        TcpListener server = new TcpListener(IPAddress.Any, port);
         server.Start();
 
         while (true) {
             await Console.Out.WriteLineAsync("waiting new client");
             TcpClient client = server.AcceptTcpClient(); // blockng
             await Console.Out.WriteLineAsync("new conn received. handling");
-#pragma warning disable CS4014 // Como esta chamada não é esperada, a execução do método atual continua antes de a chamada ser concluída
             HandleClient(client);
-#pragma warning restore CS4014 // Como esta chamada não é esperada, a execução do método atual continua antes de a chamada ser concluída
         }
     }
 
@@ -165,8 +161,11 @@ public static class Server {
     }
 
     private static async Task PingCommand(NetworkStream stream) {
-        byte[] response = Encoding.UTF8.GetBytes(PING_RESPONSE);
-        await stream.WriteAsync(response, 0, response.Length);
+        SimpleStringToken response = new() {
+            Value = "PONG"
+        };
+        byte[] responseBytes = Encoding.UTF8.GetBytes(response.ToRESP());
+        await stream.WriteAsync(responseBytes, 0, responseBytes.Length);
         await Console.Out.WriteLineAsync($"Sent: {PING_RESPONSE}");
     }
 }
