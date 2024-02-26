@@ -217,6 +217,7 @@ public static partial class Server {
         // receive RDB file
         Console.WriteLine("expecting rdb file");
         bytesRead = await stream.ReadAsync(buffer);
+        await Console.Out.WriteLineAsync($"Buffer ASCII: {buffer.FromAscii()}");
         await Console.Out.WriteLineAsync($"rdb received. amount: {bytesRead}");
         response = buffer[..bytesRead];
         await Console.Out.WriteLineAsync("response spliced");
