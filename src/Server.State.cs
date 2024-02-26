@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Security.AccessControl;
 using System.Text;
 using System.Threading.Tasks;
@@ -22,6 +23,8 @@ public static partial class Server {
     private static int masterPort = 0;
     private static string masterReplId = "";
     private static long masterReplOffset = 0;
+
+    private static List<NetworkStream> replicaStreams = new();
 
     #endregion
 }

@@ -19,6 +19,7 @@ public static partial class Server {
         };
         await stream.WriteAsync(response);
 
+        // send RDB FILE
         response = new FileToken() {
             Content = Rdb.EmptyFile,
             Length = Rdb.EmptyFile.Length
@@ -31,6 +32,11 @@ public static partial class Server {
             Value = "OK"
         };
         await stream.WriteAsync(response);
+
+        // register the replica in memory
+        if (!replicaStreams.Contains(stream)) {
+            replicaStreams.Add(stream);
+        }
     }
 
     private static async Task InfoCommand(NetworkStream stream, List<string> args) {

@@ -60,8 +60,10 @@ public static partial class Server {
                 await EchoCommand(stream, args);
             } else if(cmd == "set") {
                 await SetCommand(stream, args);
+                await SendCommandToReplicas(request);
             } else if(cmd == "get") {
                 await GetCommand(stream, args);
+                await SendCommandToReplicas(request);
             } else if (cmd == "info") {
                 await InfoCommand(stream, args);
             }else if(cmd == "replconf") {
@@ -153,5 +155,11 @@ public static partial class Server {
         request.Tokens.Add(BulkStringToken.FromString("-1"));
         request.Count = 3;
         await stream.WriteAsync(request);
+    }
+
+    private static async Task SendCommandToReplicas(byte[] args) {
+        foreach (var replica in replicaStreams) {
+            await replica.WriteAsync(args);
+        }
     }
 }
