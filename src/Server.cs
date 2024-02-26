@@ -20,7 +20,7 @@ public static partial class Server {
 
         while (true) {
             await Console.Out.WriteLineAsync("waiting new client");
-            TcpClient client = server.AcceptTcpClient(); // blocking
+            TcpClient client = await server.AcceptTcpClientAsync(); // blocking
             await Console.Out.WriteLineAsync("new conn received. handling");
             HandleClient(client);
         }
