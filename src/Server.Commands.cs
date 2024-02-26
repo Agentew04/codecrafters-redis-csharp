@@ -3,12 +3,24 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace codecrafters_redis.src; 
 public static partial class Server {
     
+    private static async Task PSyncCommand(NetworkStream stream, List<string> args) {
+        string replid = args[1];
+        long offset = long.Parse(args[2]);
+
+        SimpleStringToken response = new() {
+            Value = $"FULLRESYNC {masterReplId} 0"
+        };
+        byte[] responseBytes = Encoding.UTF8.GetBytes(response.ToRESP());
+        await stream.WriteAsync(responseBytes);
+    }
+
     private static async Task ReplConfCommand(NetworkStream stream, List<string> args) {
         SimpleStringToken response = new() {
             Value = "OK"
