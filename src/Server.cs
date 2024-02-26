@@ -2,6 +2,7 @@ using codecrafters_redis.src.RESP;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -56,64 +57,89 @@ public static class Server {
                 continue;
             }
 
-            // print array items for debug
-            await Console.Out.WriteAsync($"Array Items: ");
-            arrayToken.Tokens.Where(t => t is BulkStringToken)
-                .Cast<BulkStringToken>()
-                .ToList()
-                .ForEach(t => Console.Write(t.Value+"; "));
-            Console.WriteLine();
+            var args = FlattenArgs(arrayToken);
 
-            var cmd = ((BulkStringToken)arrayToken.Tokens[0]).Value;
+            args.ForEach(a => Console.Out.Write($"Arg: {a}; "));
+            await Console.Out.WriteLineAsync();
+
+
+            var cmd = args[0];
             await Console.Out.WriteLineAsync($"Command: {cmd}");
             if (cmd == "ping") {
                 await PingCommand(stream);
             } else if(cmd == "echo") {
-                await EchoCommand(stream, arrayToken);
-            }else if(cmd == "set") {
-                await SetCommand(stream, arrayToken);
+                await EchoCommand(stream, args);
+            } else if(cmd == "set") {
+                await SetCommand(stream, args);
             } else if(cmd == "get") {
-                await GetCommand(stream, arrayToken);
+                await GetCommand(stream, args);
+            } else if (cmd == "info") {
+                await InfoCommand(stream, args);
             }
         } while(bytesRead > 0);
         client.Close();
     }
 
-    private static async Task GetCommand(NetworkStream stream, ArrayToken arrayToken) {
-        string key = ((BulkStringToken)arrayToken.Tokens[1]).Value;
+    private static List<string> FlattenArgs(ArrayToken arrayToken) {
+        return arrayToken.Tokens
+            .Where(t => t is BulkStringToken)
+            .Cast<BulkStringToken>()
+            .Select(t => t.Value)
+            .ToList();
+    }
+
+    private static async Task InfoCommand(NetworkStream stream, List<string> args) {
+
+    }
+
+    private static async Task GetCommand(NetworkStream stream, List<string> args) {
+        string key = args[1];
         await Console.Out.WriteLineAsync($"GET {key}");
         (string value, DateTime? expiry) = _data[key];
-        BulkStringToken response;
+        RespToken response;
 
-        if(expiry is not null && expiry < DateTime.Now) {
-            response = new() {
-                Length = 0,
-                Value = ""
-            };
-        } else {
-            response = new() {
+        await Console.Out.WriteLineAsync($"Value: {value}; Expiry: {(expiry.HasValue ? expiry.Value : "null")}");
+
+        // does not have expiry, get data
+        if(expiry is null) {
+            response = new BulkStringToken() {
                 Length = value.Length,
                 Value = value
             };
         }
+        // has expiry, is not expired, get data
+        else if(expiry <= DateTime.Now) {
+            response = new BulkStringToken() {
+                Length = value.Length,
+                Value = value
+            };
+        }
+        // has expiry, is expired, set null bulk string
+        else {
+            response = new NullBulkString();
+        }
+        
         byte[] responseBytes = Encoding.UTF8.GetBytes(response.ToRESP());
         await stream.WriteAsync(responseBytes);
         await Console.Out.WriteLineAsync("Sent ok from set");
     }
 
-    private static async Task SetCommand(NetworkStream stream, ArrayToken arrayToken) {
-        string key = ((BulkStringToken)arrayToken.Tokens[1]).Value;
-        string value = ((BulkStringToken)arrayToken.Tokens[2]).Value;
-        string? px = (arrayToken.Tokens[3] as BulkStringToken)?.Value;
-        string? pxMsStr = (arrayToken.Tokens[3] as BulkStringToken)?.Value;
+    private static async Task SetCommand(NetworkStream stream, List<string> args) {
+        string key = args[1];
+        string value = args[2];
+        string? px = args.Count > 3 ? args[3] : null;
+        string? pxMsStr = args.Count > 4 ? args[4] : null;
         await Console.Out.WriteLineAsync($"SET {key}: {value}");
 
         if(px is null || pxMsStr is null) {
+            await Console.Out.WriteLineAsync($"No expiry data found(px: {px ?? "null"}; pxMsStr: {pxMsStr ?? "null"})");
             _data[key] = (value, null);
         } else {
+            await Console.Out.WriteLineAsync($"Expiry data found(px: {px}; pxMsStr: {pxMsStr})");
             int pxMs = int.Parse(pxMsStr);
             _data[key] = (value, DateTime.Now.AddMilliseconds(pxMs));
         }
+        await Console.Out.WriteLineAsync("Data has been set! Responding");
         SimpleStringToken response = new() {
             Value = "OK"
         };
@@ -122,11 +148,14 @@ public static class Server {
         await Console.Out.WriteLineAsync("Sent ok from set");
     }
 
-    private static async Task EchoCommand(NetworkStream stream, ArrayToken arrayToken) {
-        BulkStringToken echoContentToken = (BulkStringToken)arrayToken.Tokens[1];
-        byte[] response = Encoding.UTF8.GetBytes(echoContentToken.ToRESP());
-        await stream.WriteAsync(response);
-        await Console.Out.WriteLineAsync($"Sent: {echoContentToken.Value}");
+    private static async Task EchoCommand(NetworkStream stream, List<string> args) {
+        string echoContentToken = args[1];
+        BulkStringToken response = new() {
+            Length = echoContentToken.Length,
+            Value = echoContentToken
+        };
+        byte[] responseBytes = Encoding.UTF8.GetBytes(response.ToRESP());
+        await stream.WriteAsync(responseBytes);
     }
 
     private static async Task PingCommand(NetworkStream stream) {
