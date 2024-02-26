@@ -104,6 +104,6 @@ public static partial class Server {
         };
         byte[] responseBytes = Encoding.UTF8.GetBytes(response.ToRESP());
         await stream.WriteAsync(responseBytes, 0, responseBytes.Length);
-        await Console.Out.WriteLineAsync($"Sent: {PING_RESPONSE}");
+        await Console.Out.WriteLineAsync($"Sent pong");
     }
 }
