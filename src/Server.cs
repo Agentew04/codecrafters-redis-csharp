@@ -10,20 +10,16 @@ namespace codecrafters_redis.src;
 
 public static partial class Server {
 
+    private static int port;
     private static readonly Dictionary<string, (string value, DateTime? expiry)> _data = new();
+    private static bool isMaster = true;
+    private static string masterHost;
+    private static int masterPort;
+    
 
     public static async Task Main(string[] args) {
-        int port = 6379; // default value
-        int portTagIndex = Array.IndexOf(args, "--port");
-        // has specific port
-        if(portTagIndex != -1) {
-            try {
-                port = int.Parse(args[portTagIndex + 1]);
-            } catch {
-                port = 6379;
-            }
-        }
-
+        ParseFlags(args);
+        
         TcpListener server = new TcpListener(IPAddress.Any, port);
         server.Start();
 
@@ -91,5 +87,30 @@ public static partial class Server {
             .ToList();
     }
 
-    
+    private static void ParseFlags(string[] args) {
+
+        port = 6379; // default value
+        int portTagIndex = Array.IndexOf(args, "--port");
+        if (portTagIndex != -1) {
+            try {
+                port = int.Parse(args[portTagIndex + 1]);
+            } catch {
+                port = 6379;
+            }
+        }
+
+        isMaster = true; // default values
+        masterHost = "";
+        masterPort = 0;
+        int replicaofTagIndex = Array.IndexOf(args, "--replicaof");
+        if (replicaofTagIndex != -1) {
+            try {
+                isMaster = false;
+                masterHost = args[replicaofTagIndex + 1];
+                masterPort = int.Parse(args[replicaofTagIndex + 2]);
+            } catch {
+                isMaster = true;
+            }
+        }
+    }
 }

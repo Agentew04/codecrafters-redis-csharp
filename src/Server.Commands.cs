@@ -13,7 +13,7 @@ public static partial class Server {
         StringBuilder sb = new();
 
         sb.Append("# Replication\r\n");
-        sb.Append("role:master\r\n");
+        sb.Append($"role:{(isMaster ? "master" : "slave")}\r\n");
         sb.Append("connected_slaves:0\r\n");
         sb.Append("master_replid:0\r\n");
         sb.Append("master_repl_offset:0\r\n");
