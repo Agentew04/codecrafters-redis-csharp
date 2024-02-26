@@ -220,7 +220,10 @@ public static partial class Server {
         await Console.Out.WriteLineAsync($"rdb received. amount: {bytesRead}");
         response = buffer[..bytesRead];
         await Console.Out.WriteLineAsync("response spliced");
-        respToken = RespToken.Parse(response, out _);
+        respToken = RespToken.Parse(response, out int end);
+        if (end != bytesRead) {
+            await Console.Out.WriteLineAsync($"end e bytesRead diff, read: {bytesRead} end:{end}");
+        }
         await Console.Out.WriteLineAsync("response parsed");
         if (respToken is not FileToken fileToken) {
             await Console.Out.WriteLineAsync($"is not file token! type: {respToken.GetType().Name}");
