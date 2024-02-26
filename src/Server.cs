@@ -49,6 +49,14 @@ public static class Server {
             var reqToken = RespToken.Parse(request, out _);
 
             if(reqToken is ArrayToken arrayToken) {
+                await Console.Out.WriteAsync($"Array Items: ");
+
+                arrayToken.Tokens.Where(t => t is BulkStringToken)
+                    .Cast<BulkStringToken>()
+                    .ToList()
+                    .ForEach(t => Console.Write(t.Value+"; "));
+                Console.WriteLine();
+
                 var cmd = ((BulkStringToken)arrayToken.Tokens[0]).Value;
                 await Console.Out.WriteLineAsync($"Command: {cmd}");
                 if (cmd == "ping") {
@@ -57,7 +65,7 @@ public static class Server {
                     await Console.Out.WriteLineAsync($"Sent: {PING_RESPONSE}");
                 }else if(cmd == "echo") {
                     BulkStringToken echoContentToken = (BulkStringToken)arrayToken.Tokens[1];
-                    byte[] response = Encoding.UTF8.GetBytes(echoContentToken.Value);
+                    byte[] response = Encoding.UTF8.GetBytes(echoContentToken.ToRESP());
                     await stream.WriteAsync(response);
                     await Console.Out.WriteLineAsync($"Sent: {echoContentToken.Value}");
                 }
