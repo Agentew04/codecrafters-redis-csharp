@@ -124,15 +124,28 @@ public static partial class Server {
 
     private static async Task HandshakeMaster() {
         TcpClient tcpClient = new TcpClient(masterHost, masterPort);
-        using NetworkStream stream = tcpClient.GetStream();
+        NetworkStream stream = tcpClient.GetStream();
 
-        // ping
+        // send ping
         ArrayToken request = new();
         request.Tokens.Add(BulkStringToken.FromString("PING"));
         request.Count = 1;
         await stream.WriteAsync(request);
 
-        // replconf 1
+        // receive pong
+        byte[] buffer = new byte[1024];
+        int bytesRead = await stream.ReadAsync(buffer);
+        byte[] response = buffer[..bytesRead];
+        var respToken = RespToken.Parse(response, out _);
+        if (respToken is not SimpleStringToken simpleStringToken) {
+            throw new InvalidOperationException("Invalid response from master");
+        }
+        if (simpleStringToken.Value != "PONG") {
+            throw new InvalidOperationException("Invalid response from master");
+        }
+
+
+        // send replconf 1
         request = new();
         request.Tokens.Add(BulkStringToken.FromString("REPLCONF"));
         request.Tokens.Add(BulkStringToken.FromString("listening-port"));
@@ -140,7 +153,18 @@ public static partial class Server {
         request.Count = 3;
         await stream.WriteAsync(request);
 
-        // replconf 2
+        // receive OK
+        bytesRead = await stream.ReadAsync(buffer);
+        response = buffer[..bytesRead];
+        respToken = RespToken.Parse(response, out _);
+        if (respToken is not SimpleStringToken simpleStringToken2) {
+            throw new InvalidOperationException("Invalid response from master");
+        }
+        if (simpleStringToken2.Value != "OK") {
+            throw new InvalidOperationException("Invalid response from master");
+        }
+
+        // send replconf 2
         request = new();
         request.Tokens.Add(BulkStringToken.FromString("REPLCONF"));
         request.Tokens.Add(BulkStringToken.FromString("capa"));
@@ -148,13 +172,51 @@ public static partial class Server {
         request.Count = 3;
         await stream.WriteAsync(request);
 
-        // psync
+        // receive OK
+        bytesRead = await stream.ReadAsync(buffer);
+        response = buffer[..bytesRead];
+        respToken = RespToken.Parse(response, out _);
+        if (respToken is not SimpleStringToken simpleStringToken3) {
+            throw new InvalidOperationException("Invalid response from master");
+        }
+        if (simpleStringToken3.Value != "OK") {
+            throw new InvalidOperationException("Invalid response from master");
+        }
+
+        // send psync
         request = new();
         request.Tokens.Add(BulkStringToken.FromString("PSYNC"));
         request.Tokens.Add(BulkStringToken.FromString("?"));
         request.Tokens.Add(BulkStringToken.FromString("-1"));
         request.Count = 3;
         await stream.WriteAsync(request);
+
+        // receive fullresync
+        bytesRead = await stream.ReadAsync(buffer);
+        response = buffer[..bytesRead];
+        respToken = RespToken.Parse(response, out _);
+        if (respToken is not SimpleStringToken simpleStringToken4) {
+            throw new InvalidOperationException("Invalid response from master");
+        }
+        if (!simpleStringToken4.Value.StartsWith("FULLRESYNC")) {
+            throw new InvalidOperationException("Invalid response from master");
+        }
+        masterReplId = simpleStringToken4.Value.Split(' ')[1];
+
+        // receive RDB file
+
+        bytesRead = await stream.ReadAsync(buffer);
+        response = buffer[..bytesRead];
+        respToken = RespToken.Parse(response, out _);
+        if (respToken is not FileToken fileToken) {
+            throw new InvalidOperationException("Invalid response from master");
+        }
+
+        // save RDB file
+        await Rdb.SaveFile(fileToken.Content);
+
+        // send connection to main handler loop
+        HandleClient(tcpClient);
     }
 
     private static async Task SendCommandToReplicas(byte[] args) {

@@ -13,6 +13,7 @@ public static partial class Server {
     private static async Task PSyncCommand(NetworkStream stream, List<string> args) {
         string replid = args[1];
         long offset = long.Parse(args[2]);
+        await Console.Out.WriteLineAsync("PSYNC");
 
         RespToken response = new SimpleStringToken() {
             Value = $"FULLRESYNC {masterReplId} 0"
@@ -28,6 +29,7 @@ public static partial class Server {
     }
 
     private static async Task ReplConfCommand(NetworkStream stream, List<string> args) {
+        await Console.Out.WriteLineAsync("REPLCONF");
         SimpleStringToken response = new() {
             Value = "OK"
         };
@@ -41,6 +43,8 @@ public static partial class Server {
 
     private static async Task InfoCommand(NetworkStream stream, List<string> args) {
         StringBuilder sb = new();
+
+        await Console.Out.WriteLineAsync("INFO");
 
         if (args[1] != "replication") {
             return;
@@ -64,14 +68,8 @@ public static partial class Server {
         (string value, DateTime? expiry) = _data[key];
         RespToken response;
 
-        await Console.Out.WriteLineAsync($"Value: {value}; Expiry: {(expiry.HasValue ? expiry.Value : "null")}");
-
-        await Console.Out.WriteLineAsync($"NowTicks: {DateTime.Now.Ticks} ExpiryTicks: {(expiry.HasValue ? expiry.Value.Ticks : "null")} " +
-            $"Diff: {(expiry.HasValue ? expiry.Value.Ticks : 0) - DateTime.Now.Ticks}");
-
         // does not have expiry, get data
         if (!expiry.HasValue) {
-            await Console.Out.WriteLineAsync("Expiry not found. Retrieving data");
             response = new BulkStringToken() {
                 Length = value.Length,
                 Value = value
@@ -79,7 +77,6 @@ public static partial class Server {
         }
         // has expiry, is not expired, get data
         else if ((expiry.Value.Ticks - DateTime.Now.Ticks > 0)) {
-            await Console.Out.WriteLineAsync("Expiry found. Not expired yet. retrieving data");
             response = new BulkStringToken() {
                 Length = value.Length,
                 Value = value
@@ -87,12 +84,12 @@ public static partial class Server {
         }
         // has expiry, is expired, set null bulk string
         else {
-            await Console.Out.WriteLineAsync("Expiry found. The diff was negative, was expired. issuing nullbulk");
             response = new NullBulkString();
         }
 
-        await stream.WriteAsync(response);
-        await Console.Out.WriteLineAsync("Sent data from get");
+        if (isMaster) {
+            await stream.WriteAsync(response);
+        }
     }
 
     private static async Task SetCommand(NetworkStream stream, List<string> args) {
@@ -103,19 +100,18 @@ public static partial class Server {
         await Console.Out.WriteLineAsync($"SET {key}: {value}");
 
         if (px is null || pxMsStr is null) {
-            await Console.Out.WriteLineAsync($"No expiry data found(px: {px ?? "null"}; pxMsStr: {pxMsStr ?? "null"})");
             _data[key] = (value, null);
         } else {
-            await Console.Out.WriteLineAsync($"Expiry data found(px: {px}; pxMsStr: {pxMsStr})");
             int pxMs = int.Parse(pxMsStr);
             _data[key] = (value, DateTime.Now.AddMilliseconds(pxMs));
         }
-        await Console.Out.WriteLineAsync("Data has been set! Responding");
         SimpleStringToken response = new() {
             Value = "OK"
         };
-        await stream.WriteAsync(response);
-        await Console.Out.WriteLineAsync("Sent ok from set");
+
+        if (isMaster) {
+            await stream.WriteAsync(response);
+        }
     }
 
     private static async Task EchoCommand(NetworkStream stream, List<string> args) {
@@ -128,10 +124,10 @@ public static partial class Server {
     }
 
     private static async Task PingCommand(NetworkStream stream) {
+        await Console.Out.WriteLineAsync($"PING");
         SimpleStringToken response = new() {
             Value = "PONG"
         };
         await stream.WriteAsync(response);
-        await Console.Out.WriteLineAsync($"Sent pong");
     }
 }
