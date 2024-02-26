@@ -224,6 +224,20 @@ public static partial class Server {
         await Console.Out.WriteLineAsync("response parsed");
         if (respToken is not FileToken fileToken) {
             await Console.Out.WriteLineAsync($"is not file token! type: {respToken.GetType().Name}");
+            ArrayToken arrayToken = (ArrayToken)respToken;
+            await Console.Out.WriteLineAsync(string.Join(", ", arrayToken.Tokens.Select(t => t.GetType().Name)));
+            await Console.Out.WriteLineAsync(string.Join(", ", arrayToken.Tokens
+                .Select(t => {
+                    if (t is SimpleStringToken sst) {
+                        return sst.Value;
+                    } else if (t is BulkStringToken bst) {
+                        return bst.Value;
+                    }
+                    return t.GetType().Name;
+                })
+                .ToList()));
+                
+
             throw new InvalidOperationException("Invalid response from master");
         }
         await Console.Out.WriteLineAsync("is file token");
