@@ -29,11 +29,14 @@ public static partial class Server {
     public static async Task HandleClient(TcpClient client, bool isMasterConnection = false) {
         using NetworkStream stream = client.GetStream();
 
+        if (isMasterConnection) {
+            await Console.Out.WriteLineAsync("Handling Master connection");
+        }
         byte[] buffer = new byte[1024];
 
         int bytesRead;
         do {
-            bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+            bytesRead = await stream.ReadAsync(buffer);
 
             if(bytesRead == 0) {
                 break;
@@ -50,10 +53,12 @@ public static partial class Server {
             var args = FlattenArgs(arrayToken);
 
             args = args.Select(a => a.ToLower()).ToList();
+
+            Console.Write("Command: ");
+            Console.WriteLine(string.Join(" ", args));
             
 
             var cmd = args[0];
-            await Console.Out.WriteLineAsync($"Command: {cmd}");
             if (cmd == "ping") {
                 await PingCommand(stream);
             } else if(cmd == "echo") {
@@ -62,8 +67,7 @@ public static partial class Server {
                 await SetCommand(stream, args, isMasterConnection);
                 await SendCommandToReplicas(request);
             } else if(cmd == "get") {
-                await GetCommand(stream, args, isMasterConnection);
-                await SendCommandToReplicas(request);
+                await GetCommand(stream, args);
             } else if (cmd == "info") {
                 await InfoCommand(stream, args);
             }else if(cmd == "replconf") {
@@ -216,15 +220,21 @@ public static partial class Server {
         await Rdb.SaveFile(fileToken.Content);
 
         // send connection to main handler loop
+        await Console.Out.WriteLineAsync("Sending master connection to Handler");
         HandleClient(tcpClient, true);
     }
 
     private static async Task SendCommandToReplicas(byte[] args) {
         if (!isMaster) {
+            await Console.Out.WriteLineAsync("Received propagatable command but i am a slave. not propagating");
             return;
         }
+        await Console.Out.WriteLineAsync($"Propagating: {args.FromAscii()}");
+        int i = 0;
         foreach (var replica in replicaStreams) {
+            await Console.Out.WriteLineAsync("Propagation "+i);
             await replica.WriteAsync(args);
+            i++;
         }
     }
 }

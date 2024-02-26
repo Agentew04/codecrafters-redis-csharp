@@ -62,7 +62,7 @@ public static partial class Server {
         await stream.WriteAsync(response);
     }
 
-    private static async Task GetCommand(NetworkStream stream, List<string> args, bool isMasterConnection) {
+    private static async Task GetCommand(NetworkStream stream, List<string> args) {
         string key = args[1];
         await Console.Out.WriteLineAsync($"GET {key}");
         (string value, DateTime? expiry) = _data[key];
@@ -87,9 +87,7 @@ public static partial class Server {
             response = new NullBulkString();
         }
 
-        if (!isMasterConnection) {
-            await stream.WriteAsync(response);
-        }
+        await stream.WriteAsync(response);
     }
 
     private static async Task SetCommand(NetworkStream stream, List<string> args, bool isMasterConnection) {
@@ -110,11 +108,15 @@ public static partial class Server {
         };
 
         if (!isMasterConnection) {
+            await Console.Out.WriteLineAsync("This is not master connection. responding");
             await stream.WriteAsync(response);
+        } else {
+            await Console.Out.WriteLineAsync("This IS master connection, not sending response");
         }
     }
 
     private static async Task EchoCommand(NetworkStream stream, List<string> args) {
+        await Console.Out.WriteLineAsync("ECHO");
         string echoContentToken = args[1];
         BulkStringToken response = new() {
             Length = echoContentToken.Length,
