@@ -18,8 +18,8 @@ public static partial class Server {
     #region Replication
 
     private static bool isMaster = true;
-    private static string masterHost;
-    private static int masterPort;
+    private static string masterHost = "";
+    private static int masterPort = 0;
     private static string masterReplId = "";
     private static long masterReplOffset = 0;
 

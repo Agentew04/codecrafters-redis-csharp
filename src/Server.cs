@@ -13,6 +13,7 @@ public static partial class Server {
 
     public static async Task Main(string[] args) {
         ParseFlags(args);
+        Setup();
         
         TcpListener server = new TcpListener(IPAddress.Any, port);
         server.Start();
@@ -96,8 +97,7 @@ public static partial class Server {
         isMaster = true; // default values
         masterHost = "";
         masterPort = 0;
-        masterReplId =  Convert.ToHexString(RandomNumberGenerator.GetBytes(20));
-        masterReplOffset = 0;
+        
         int replicaofTagIndex = Array.IndexOf(args, "--replicaof");
         if (replicaofTagIndex != -1) {
             try {
@@ -108,5 +108,26 @@ public static partial class Server {
                 isMaster = true;
             }
         }
+    }
+
+    private static void Setup() {
+        if (isMaster) {
+            masterReplId = Convert.ToHexString(RandomNumberGenerator.GetBytes(20));
+            masterReplOffset = 0;
+        } else { // replica
+            HandshakeMaster();
+        }
+    }
+
+    private static void HandshakeMaster() {
+        TcpClient tcpClient = new TcpClient(masterHost, masterPort);
+        using NetworkStream stream = tcpClient.GetStream();
+
+        ArrayToken request = new();
+        request.Tokens.Add(new BulkStringToken() { Value = "ping", Length = "ping".Length });
+        request.Count = 1;
+
+        byte[] requestBytes = Encoding.UTF8.GetBytes(request.ToRESP());
+        stream.Write(requestBytes, 0, requestBytes.Length);
     }
 }
