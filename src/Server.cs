@@ -49,7 +49,7 @@ public static class Server {
             var reqToken = RespToken.Parse(request, out _);
 
             if(reqToken is ArrayToken arrayToken) {
-                var cmd = arrayToken.Tokens[0].ToRESP();
+                var cmd = ((BulkStringToken)arrayToken.Tokens[0]).Value;
                 await Console.Out.WriteLineAsync($"Command: {cmd}");
                 if (cmd == "ping") {
                     byte[] response = Encoding.UTF8.GetBytes(PING_RESPONSE);
