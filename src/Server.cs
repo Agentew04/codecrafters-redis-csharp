@@ -69,6 +69,8 @@ public static partial class Server {
                 await GetCommand(stream, args);
             } else if (cmd == "info") {
                 await InfoCommand(stream, args);
+            }else if(cmd == "replconf") {
+                await ReplConfCommand(stream, args);
             }
         } while(bytesRead > 0);
         client.Close();
@@ -123,11 +125,29 @@ public static partial class Server {
         TcpClient tcpClient = new TcpClient(masterHost, masterPort);
         using NetworkStream stream = tcpClient.GetStream();
 
+        // ping
         ArrayToken request = new();
-        request.Tokens.Add(new BulkStringToken() { Value = "ping", Length = "ping".Length });
+        request.Tokens.Add(BulkStringToken.FromString("PING"));
         request.Count = 1;
-
         byte[] requestBytes = Encoding.UTF8.GetBytes(request.ToRESP());
+        stream.Write(requestBytes, 0, requestBytes.Length);
+
+        // replconf 1
+        request = new();
+        request.Tokens.Add(BulkStringToken.FromString("REPLCONF"));
+        request.Tokens.Add(BulkStringToken.FromString("listening-port"));
+        request.Tokens.Add(BulkStringToken.FromString(port.ToString()));
+        request.Count = 3;
+        requestBytes = Encoding.UTF8.GetBytes(request.ToRESP());
+        stream.Write(requestBytes, 0, requestBytes.Length);
+
+        // replconf 2
+        request = new();
+        request.Tokens.Add(BulkStringToken.FromString("REPLCONF"));
+        request.Tokens.Add(BulkStringToken.FromString("capa"));
+        request.Tokens.Add(BulkStringToken.FromString("psync2"));
+        request.Count = 3;
+        requestBytes = Encoding.UTF8.GetBytes(request.ToRESP());
         stream.Write(requestBytes, 0, requestBytes.Length);
     }
 }

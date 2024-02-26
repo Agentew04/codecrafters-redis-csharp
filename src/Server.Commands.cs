@@ -8,10 +8,21 @@ using System.Threading.Tasks;
 
 namespace codecrafters_redis.src; 
 public static partial class Server {
+    
+    private static async Task ReplConfCommand(NetworkStream stream, List<string> args) {
+        SimpleStringToken response = new() {
+            Value = "OK"
+        };
+        byte[] responseBytes = Encoding.UTF8.GetBytes(response.ToRESP());
+        await stream.WriteAsync(responseBytes);
+    }
 
     private static async Task InfoCommand(NetworkStream stream, List<string> args) {
         StringBuilder sb = new();
 
+        if (args[1] != "replication") {
+            return;
+        }
         sb.Append("# Replication\r\n");
         sb.Append($"role:{(isMaster ? "master" : "slave")}\r\n");
         sb.Append("connected_slaves:0\r\n");

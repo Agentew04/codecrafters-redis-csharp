@@ -27,4 +27,11 @@ public class BulkStringToken : RespToken {
     public override string ToRESP() {
         return $"${Length}\r\n{Value}\r\n";
     }
+
+    public static BulkStringToken FromString(string value) {
+        return new BulkStringToken() {
+            Length = value.Length,
+            Value = value
+        };
+    }
 }
