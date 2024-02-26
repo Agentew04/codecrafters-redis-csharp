@@ -204,7 +204,8 @@ public static partial class Server {
         // receive fullresync
         bytesRead = await stream.ReadAsync(buffer);
         response = buffer[..bytesRead];
-        respToken = RespToken.Parse(response, out _);
+        respToken = RespToken.Parse(response, out int resyncEnd);
+        Console.WriteLine($"Read: {bytesRead}, ResyncEnd: {resyncEnd}");
         if (respToken is not SimpleStringToken simpleStringToken4) {
             await Console.Out.WriteLineAsync("Response is not simple string");
             throw new InvalidOperationException("Invalid response from master");
@@ -221,13 +222,13 @@ public static partial class Server {
         await Console.Out.WriteLineAsync($"received rdb file, size: {bytesRead}");
         response = buffer[..bytesRead];
         Console.WriteLine($"response size: {response.Length}");
-        respToken = RespToken.Parse(response, out _);
-        if (respToken is not FileToken fileToken) {
-            await Console.Out.WriteLineAsync($"is not file token! type: {respToken.GetType().Name}");
-            return;
-        }
+        //respToken = RespToken.Parse(response, out _);
+        //if (respToken is not FileToken fileToken) {
+        //    await Console.Out.WriteLineAsync($"is not file token! type: {respToken.GetType().Name}");
+        //    return;
+        //}
 
-        Rdb.SaveFile(fileToken.Content);
+        //Rdb.SaveFile(fileToken.Content);
             
         // send connection to main handler loop
         await Console.Out.WriteLineAsync("Sending master connection to Handler");
