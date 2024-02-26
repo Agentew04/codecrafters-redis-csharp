@@ -49,9 +49,8 @@ public static partial class Server {
 
             var args = FlattenArgs(arrayToken);
 
-            args.ForEach(a => Console.Out.Write($"Arg: {a}; "));
-            await Console.Out.WriteLineAsync();
-
+            args = args.Select(a => a.ToLower()).ToList();
+            
 
             var cmd = args[0];
             await Console.Out.WriteLineAsync($"Command: {cmd}");
