@@ -215,7 +215,7 @@ public static partial class Server {
         await Console.Out.WriteLineAsync($"received fullresync, replid: {masterReplId}");
 
         // extract rdb file from previous request
-        RespToken rdbfileToken = (FileToken)RespToken.Parse(response[resyncEnd..], out _);
+        respToken = RespToken.Parse(response[resyncEnd..], out _);
         if (respToken is not FileToken fileToken) {
             await Console.Out.WriteLineAsync($"is not file token! type: {respToken.GetType().Name}");
             return;
