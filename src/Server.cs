@@ -217,15 +217,19 @@ public static partial class Server {
         // receive RDB file
         Console.WriteLine("expecting rdb file");
         bytesRead = await stream.ReadAsync(buffer);
-        await Console.Out.WriteLineAsync("rdb received");
+        await Console.Out.WriteLineAsync($"rdb received. amount: {bytesRead}");
         response = buffer[..bytesRead];
+        await Console.Out.WriteLineAsync("response spliced");
         respToken = RespToken.Parse(response, out _);
+        await Console.Out.WriteLineAsync("response parsed");
         if (respToken is not FileToken fileToken) {
+            await Console.Out.WriteLineAsync($"is not file token! type: {respToken.GetType().Name}");
             throw new InvalidOperationException("Invalid response from master");
         }
+        await Console.Out.WriteLineAsync("is file token");
 
         // save RDB file
-        await Rdb.SaveFile(fileToken.Content);
+        //Rdb.SaveFile(fileToken.Content);
 
         // send connection to main handler loop
         await Console.Out.WriteLineAsync("Sending master connection to Handler");
