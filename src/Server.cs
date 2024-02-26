@@ -155,5 +155,8 @@ public static partial class Server {
         request.Tokens.Add(BulkStringToken.FromString("PSYNC"));
         request.Tokens.Add(BulkStringToken.FromString("?"));
         request.Tokens.Add(BulkStringToken.FromString("-1"));
+        request.Count = 3;
+        requestBytes = Encoding.UTF8.GetBytes(request.ToRESP());
+        stream.Write(requestBytes, 0, requestBytes.Length);
     }
 }
