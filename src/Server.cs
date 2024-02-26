@@ -9,7 +9,7 @@ namespace codecrafters_redis.src;
 
 public static class Server {
 
-    private static readonly Dictionary<string, string> _data = new();
+    private static readonly Dictionary<string, (string value, DateTime? expiry)> _data = new();
 
     const string CRLF = "\r\n";
     const int PORT = 6379;
@@ -82,11 +82,20 @@ public static class Server {
     private static async Task GetCommand(NetworkStream stream, ArrayToken arrayToken) {
         string key = ((BulkStringToken)arrayToken.Tokens[1]).Value;
         await Console.Out.WriteLineAsync($"GET {key}");
-        string value = _data[key];
-        BulkStringToken response = new() {
-            Length = value.Length,
-            Value = value
-        };
+        (string value, DateTime? expiry) = _data[key];
+        BulkStringToken response;
+
+        if(expiry is not null && expiry < DateTime.Now) {
+            response = new() {
+                Length = 0,
+                Value = ""
+            };
+        } else {
+            response = new() {
+                Length = value.Length,
+                Value = value
+            };
+        }
         byte[] responseBytes = Encoding.UTF8.GetBytes(response.ToRESP());
         await stream.WriteAsync(responseBytes);
         await Console.Out.WriteLineAsync("Sent ok from set");
@@ -95,8 +104,16 @@ public static class Server {
     private static async Task SetCommand(NetworkStream stream, ArrayToken arrayToken) {
         string key = ((BulkStringToken)arrayToken.Tokens[1]).Value;
         string value = ((BulkStringToken)arrayToken.Tokens[2]).Value;
+        string? px = (arrayToken.Tokens[3] as BulkStringToken)?.Value;
+        string? pxMsStr = (arrayToken.Tokens[3] as BulkStringToken)?.Value;
         await Console.Out.WriteLineAsync($"SET {key}: {value}");
-        _data[key] = value;
+
+        if(px is null || pxMsStr is null) {
+            _data[key] = (value, null);
+        } else {
+            int pxMs = int.Parse(pxMsStr);
+            _data[key] = (value, DateTime.Now.AddMilliseconds(pxMs));
+        }
         SimpleStringToken response = new() {
             Value = "OK"
         };
