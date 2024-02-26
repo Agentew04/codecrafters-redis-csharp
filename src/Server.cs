@@ -3,19 +3,13 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.ExceptionServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 
 namespace codecrafters_redis.src;
 
 public static partial class Server {
-
-    private static int port;
-    private static readonly Dictionary<string, (string value, DateTime? expiry)> _data = new();
-    private static bool isMaster = true;
-    private static string masterHost;
-    private static int masterPort;
-    
 
     public static async Task Main(string[] args) {
         ParseFlags(args);
@@ -102,6 +96,8 @@ public static partial class Server {
         isMaster = true; // default values
         masterHost = "";
         masterPort = 0;
+        masterReplId =  Convert.ToHexString(RandomNumberGenerator.GetBytes(20));
+        masterReplOffset = 0;
         int replicaofTagIndex = Array.IndexOf(args, "--replicaof");
         if (replicaofTagIndex != -1) {
             try {

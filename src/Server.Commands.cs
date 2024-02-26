@@ -15,8 +15,8 @@ public static partial class Server {
         sb.Append("# Replication\r\n");
         sb.Append($"role:{(isMaster ? "master" : "slave")}\r\n");
         sb.Append("connected_slaves:0\r\n");
-        sb.Append("master_replid:0\r\n");
-        sb.Append("master_repl_offset:0\r\n");
+        sb.Append($"master_replid:{masterReplId}\r\n");
+        sb.Append($"master_repl_offset:{masterReplOffset}\r\n");
 
         BulkStringToken response = new() {
             Length = sb.Length,
