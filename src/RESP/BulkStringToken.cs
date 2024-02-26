@@ -10,22 +10,24 @@ public class BulkStringToken : RespToken {
     public int Length { get; set; }
     public string Value { get; set; } = "";
 
-    public override RespToken FromRESP(string resp, out int endIndex) {
-        int sizeEndIndex = 1;
-        // read string numbers until \r\n
-        while (resp[sizeEndIndex] >= '0' && resp[sizeEndIndex] <= '9') {
-            sizeEndIndex++;
-        }
-
-        string sizeStr = resp[1..sizeEndIndex];
+    public override RespToken FromRESP(byte[] resp, out int endIndex) {
+        ReadSize(resp, 1, out int sizeEndIndex);
+        
+        byte[] sizeBytes = resp[1..sizeEndIndex];
+        string sizeStr = sizeBytes.FromAscii();
         Length = int.Parse(sizeStr);
-        Value = resp.Substring(sizeEndIndex + 2, Length);
+        byte[] valueBytes = resp[(sizeEndIndex + 2)..(sizeEndIndex + 2 + Length)];
+        Value = valueBytes.FromAscii();
         endIndex = sizeEndIndex + 2 + Length + 2;
         return this;
     }
 
-    public override string ToRESP() {
-        return $"${Length}\r\n{Value}\r\n";
+    public override byte[] ToRESP() {
+        List<byte> bytes = new();
+        bytes.AddRange($"${Length}\r\n".ToAscii());
+        bytes.AddRange(Value.ToAscii());
+        bytes.AddRange("\r\n".ToAscii());
+        return bytes.ToArray();
     }
 
     public static BulkStringToken FromString(string value) {

@@ -9,11 +9,11 @@ public class IntegerToken : RespToken{
 
     public int Value { get; set; }
 
-    public override string ToRESP() {
-        return $":{Value}\r\n";
+    public override byte[] ToRESP() {
+        return $":{Value}\r\n".ToAscii();
     }
 
-    public override RespToken FromRESP(string resp, out int endIndex) {
+    public override RespToken FromRESP(byte[] resp, out int endIndex) {
         if (resp[0] != ':') {
             throw new InvalidDataException("Invalid RESP data");
         }

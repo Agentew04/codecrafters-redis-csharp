@@ -35,14 +35,10 @@ public static partial class Server {
         do {
             bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
 
-            string request = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-            await Console.Out.WriteLineAsync($"Received: {request}");
-
-            if (request.Length == 0) {
-                await Console.Out.WriteLineAsync("end conn");
+            if(bytesRead == 0) {
                 break;
             }
-            request = request.ToLower();
+            byte[] request = buffer[..bytesRead];
 
             var reqToken = RespToken.Parse(request, out _);
 
@@ -116,16 +112,16 @@ public static partial class Server {
         }
     }
 
-    private static void Setup() {
+    private static async Task Setup() {
         if (isMaster) {
             masterReplId = Convert.ToHexString(RandomNumberGenerator.GetBytes(20));
             masterReplOffset = 0;
         } else { // replica
-            HandshakeMaster();
+            await HandshakeMaster();
         }
     }
 
-    private static void HandshakeMaster() {
+    private static async Task HandshakeMaster() {
         TcpClient tcpClient = new TcpClient(masterHost, masterPort);
         using NetworkStream stream = tcpClient.GetStream();
 
@@ -133,8 +129,7 @@ public static partial class Server {
         ArrayToken request = new();
         request.Tokens.Add(BulkStringToken.FromString("PING"));
         request.Count = 1;
-        byte[] requestBytes = Encoding.UTF8.GetBytes(request.ToRESP());
-        stream.Write(requestBytes, 0, requestBytes.Length);
+        await stream.WriteAsync(request);
 
         // replconf 1
         request = new();
@@ -142,8 +137,7 @@ public static partial class Server {
         request.Tokens.Add(BulkStringToken.FromString("listening-port"));
         request.Tokens.Add(BulkStringToken.FromString(port.ToString()));
         request.Count = 3;
-        requestBytes = Encoding.UTF8.GetBytes(request.ToRESP());
-        stream.Write(requestBytes, 0, requestBytes.Length);
+        await stream.WriteAsync(request);
 
         // replconf 2
         request = new();
@@ -151,8 +145,7 @@ public static partial class Server {
         request.Tokens.Add(BulkStringToken.FromString("capa"));
         request.Tokens.Add(BulkStringToken.FromString("psync2"));
         request.Count = 3;
-        requestBytes = Encoding.UTF8.GetBytes(request.ToRESP());
-        stream.Write(requestBytes, 0, requestBytes.Length);
+        await stream.WriteAsync(request);
 
         // psync
         request = new();
@@ -160,7 +153,6 @@ public static partial class Server {
         request.Tokens.Add(BulkStringToken.FromString("?"));
         request.Tokens.Add(BulkStringToken.FromString("-1"));
         request.Count = 3;
-        requestBytes = Encoding.UTF8.GetBytes(request.ToRESP());
-        stream.Write(requestBytes, 0, requestBytes.Length);
+        await stream.WriteAsync(request);
     }
 }

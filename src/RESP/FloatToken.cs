@@ -9,17 +9,31 @@ public class FloatToken : RespToken {
 
     public float Value { get; set; }
 
-    public override string ToRESP() {
-        return $",{Value}\r\n";
+    public override byte[] ToRESP() {
+        List<byte> bytes = new();
+        bytes.AddRange(",".ToAscii());
+        string valueStr;
+        if (float.IsPositiveInfinity(Value)) {
+            valueStr = "inf";
+        }else if (float.IsNegativeInfinity(Value)) {
+            valueStr = "-inf";
+        }else if (float.IsNaN(Value)) {
+            valueStr = "nan";
+        } else {
+            valueStr = Value.ToString();
+        }
+        bytes.AddRange(valueStr.ToAscii());
+        bytes.AddRange("\r\n".ToAscii());
+        return bytes.ToArray();
     }
 
-    public override RespToken FromRESP(string resp, out int endIndex) {
+    public override RespToken FromRESP(byte[] resp, out int endIndex) {
         int i = 1;
         int start = i;
         while (resp[i] != '\r' && resp[i + 1] != '\n') {
             i++;
         }
-        string number = resp.Substring(start, i - start);
+        string number = resp[start..i].FromAscii();
         if(number == "inf")
             Value = float.PositiveInfinity;
         else if(number == "-inf")

@@ -9,12 +9,12 @@ namespace codecrafters_redis.src.RESP {
         public int Count { get; set; }
         public List<RespToken> Tokens { get; set; } = new();
 
-        public override RespToken FromRESP(string resp, out int endIndex) {
+        public override RespToken FromRESP(byte[] resp, out int endIndex) {
             Count = ReadSize(resp, 1, out int endIdx);
             int dataIndex = endIdx + 2;
             Tokens = new List<RespToken>();
             for (int i = 0; i < Count; i++) {
-                var token = RespToken.Parse(resp[dataIndex..], out int tokenEndIdx);
+                var token = Parse(resp[dataIndex..], out int tokenEndIdx);
                 Tokens.Add(token);
                 dataIndex += tokenEndIdx;
             }
@@ -22,15 +22,15 @@ namespace codecrafters_redis.src.RESP {
             return this;
         }
 
-        public override string ToRESP() {
-            StringBuilder sb = new();
+        public override byte[] ToRESP() {
+            List<byte> bytes = new();
 
-            sb.Append($"*{Count}\r\n");
+            bytes.AddRange($"*{Count}\r\n".ToAscii());
             foreach (var token in Tokens) {
-                sb.Append(token.ToRESP());
+                bytes.AddRange(token.ToRESP());
             }
 
-            return sb.ToString();
+            return bytes.ToArray();
         }
     }
 }

@@ -12,7 +12,7 @@ public abstract class RespToken {
     /// Should end with a \r\n
     /// </summary>
     /// <returns></returns>
-    public abstract string ToRESP();
+    public abstract byte[] ToRESP();
 
     /// <summary>
     /// Populates current RESP Token from a RESP string.
@@ -20,9 +20,9 @@ public abstract class RespToken {
     /// </summary>
     /// <param name="resp">The resp data</param>
     /// <exception cref="InvalidDataException">Should be thrown when the wrong resp data is given</exception>
-    public abstract RespToken FromRESP(string resp, out int endIndex);
+    public abstract RespToken FromRESP(byte[] resp, out int endIndex);
 
-    public static RespToken Parse(string resp, out int endIndex) {
+    public static RespToken Parse(byte[] resp, out int endIndex) {
         if (resp[0] == '+') {
             return new SimpleStringToken().FromRESP(resp, out endIndex);
         }
@@ -52,13 +52,14 @@ public abstract class RespToken {
     /// <param name="startIndex">The index where the function starts reading the int</param>
     /// <param name="sizeEndIndex">Index where the int ended</param>
     /// <returns>The size read</returns>
-    protected static int ReadSize(string resp, int startIndex, out int sizeEndIndex) {
+    protected static int ReadSize(byte[] resp, int startIndex, out int sizeEndIndex) {
         // read string numbers until \r\n
         while (resp[startIndex] >= '0' && resp[startIndex] <= '9') {
             startIndex++;
         }
 
-        string sizeStr = resp[1..startIndex];
+        byte[] sizeBytes = resp[1..startIndex];
+        string sizeStr = Encoding.ASCII.GetString(sizeBytes);
         sizeEndIndex = startIndex;
         return int.Parse(sizeStr);
     }

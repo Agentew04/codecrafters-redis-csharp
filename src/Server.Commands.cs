@@ -17,16 +17,16 @@ public static partial class Server {
         SimpleStringToken response = new() {
             Value = $"FULLRESYNC {masterReplId} 0"
         };
-        byte[] responseBytes = Encoding.UTF8.GetBytes(response.ToRESP());
-        await stream.WriteAsync(responseBytes);
+        await stream.WriteAsync(response);
+
+        await stream.WriteAsync(Rdb.EmptyFile);
     }
 
     private static async Task ReplConfCommand(NetworkStream stream, List<string> args) {
         SimpleStringToken response = new() {
             Value = "OK"
         };
-        byte[] responseBytes = Encoding.UTF8.GetBytes(response.ToRESP());
-        await stream.WriteAsync(responseBytes);
+        await stream.WriteAsync(response);
     }
 
     private static async Task InfoCommand(NetworkStream stream, List<string> args) {
@@ -45,8 +45,7 @@ public static partial class Server {
             Length = sb.Length,
             Value = sb.ToString()
         };
-        byte[] responseBytes = Encoding.UTF8.GetBytes(response.ToRESP());
-        await stream.WriteAsync(responseBytes);
+        await stream.WriteAsync(response);
     }
 
     private static async Task GetCommand(NetworkStream stream, List<string> args) {
@@ -82,8 +81,7 @@ public static partial class Server {
             response = new NullBulkString();
         }
 
-        byte[] responseBytes = Encoding.UTF8.GetBytes(response.ToRESP());
-        await stream.WriteAsync(responseBytes);
+        await stream.WriteAsync(response);
         await Console.Out.WriteLineAsync("Sent data from get");
     }
 
@@ -106,8 +104,7 @@ public static partial class Server {
         SimpleStringToken response = new() {
             Value = "OK"
         };
-        byte[] responseBytes = Encoding.UTF8.GetBytes(response.ToRESP());
-        await stream.WriteAsync(responseBytes);
+        await stream.WriteAsync(response);
         await Console.Out.WriteLineAsync("Sent ok from set");
     }
 
@@ -117,16 +114,14 @@ public static partial class Server {
             Length = echoContentToken.Length,
             Value = echoContentToken
         };
-        byte[] responseBytes = Encoding.UTF8.GetBytes(response.ToRESP());
-        await stream.WriteAsync(responseBytes);
+        await stream.WriteAsync(response);
     }
 
     private static async Task PingCommand(NetworkStream stream) {
         SimpleStringToken response = new() {
             Value = "PONG"
         };
-        byte[] responseBytes = Encoding.UTF8.GetBytes(response.ToRESP());
-        await stream.WriteAsync(responseBytes, 0, responseBytes.Length);
+        await stream.WriteAsync(response);
         await Console.Out.WriteLineAsync($"Sent pong");
     }
 }
