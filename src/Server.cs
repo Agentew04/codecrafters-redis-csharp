@@ -204,7 +204,7 @@ public static partial class Server {
         // receive fullresync
         bytesRead = await stream.ReadAsync(buffer);
         response = buffer[..bytesRead];
-        respToken = RespToken.Parse(response, out _);
+        respToken = RespToken.Parse(response, out int resyncEnd);
         if (respToken is not SimpleStringToken simpleStringToken4) {
             throw new InvalidOperationException("Invalid response from master");
         }
@@ -214,41 +214,15 @@ public static partial class Server {
         masterReplId = simpleStringToken4.Value.Split(' ')[1];
         await Console.Out.WriteLineAsync($"received fullresync, replid: {masterReplId}");
 
-        // receive RDB file
-        Console.WriteLine("expecting rdb file");
-        bytesRead = await stream.ReadAsync(buffer);
-        await Console.Out.WriteLineAsync($"Buffer ASCII: {buffer.FromAscii()}");
-        await Console.Out.WriteLineAsync($"rdb received. amount: {bytesRead}");
-        response = buffer[..bytesRead];
-        await Console.Out.WriteLineAsync("response spliced");
-        respToken = RespToken.Parse(response, out int end);
-        if (end != bytesRead) {
-            await Console.Out.WriteLineAsync($"end e bytesRead diff, read: {bytesRead} end:{end}");
-        }
-        await Console.Out.WriteLineAsync("response parsed");
+        // extract rdb file from previous request
+        RespToken rdbfileToken = (FileToken)RespToken.Parse(response[resyncEnd..], out _);
         if (respToken is not FileToken fileToken) {
             await Console.Out.WriteLineAsync($"is not file token! type: {respToken.GetType().Name}");
-            ArrayToken arrayToken = (ArrayToken)respToken;
-            await Console.Out.WriteLineAsync(string.Join(", ", arrayToken.Tokens.Select(t => t.GetType().Name)));
-            await Console.Out.WriteLineAsync(string.Join(", ", arrayToken.Tokens
-                .Select(t => {
-                    if (t is SimpleStringToken sst) {
-                        return sst.Value;
-                    } else if (t is BulkStringToken bst) {
-                        return bst.Value;
-                    }
-                    return t.GetType().Name;
-                })
-                .ToList()));
-                
-
-            throw new InvalidOperationException("Invalid response from master");
+            return;
         }
-        await Console.Out.WriteLineAsync("is file token");
 
-        // save RDB file
-        //Rdb.SaveFile(fileToken.Content);
-
+        Rdb.SaveFile(fileToken.Content);
+            
         // send connection to main handler loop
         await Console.Out.WriteLineAsync("Sending master connection to Handler");
         HandleMaster(tcpClient); // do not await
