@@ -71,6 +71,10 @@ public static partial class Server {
                 await InfoCommand(stream, args);
             }else if(cmd == "replconf") {
                 await ReplConfCommand(stream, args);
+            }else if(cmd == "psync") {
+                await PSyncCommand(stream, args);
+            } else {
+                await Console.Out.WriteLineAsync("Command not found");
             }
         } while(bytesRead > 0);
         client.Close();
