@@ -65,7 +65,15 @@ public static partial class Server {
     private static async Task GetCommand(NetworkStream stream, List<string> args) {
         string key = args[1];
         await Console.Out.WriteLineAsync($"GET {key}");
-        (string value, DateTime? expiry) = _data[key];
+        string value;
+        DateTime? expiry;
+        try {
+            (value, expiry) = _data[key];
+        }catch(KeyNotFoundException) {
+            Console.WriteLine($"Key {key} not found, returning null");
+            await stream.WriteAsync(new NullToken());
+            return;
+        }
         RespToken response;
 
         // does not have expiry, get data

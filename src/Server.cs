@@ -226,7 +226,12 @@ public static partial class Server {
             respToken = RespToken.Parse(response, out _);
             if (respToken is not FileToken fileToken) {
                 await Console.Out.WriteLineAsync($"is not file token! type: {respToken.GetType().Name}");
+                if(respToken is BulkStringToken tkn) {
+                    await Console.Out.WriteLineAsync($"string: {tkn.Value}");
+                }
                 return;
+            }else {
+                await Console.Out.WriteLineAsync($"is file token! size: {fileToken.Length}");
             }
 
             Rdb.SaveFile(fileToken.Content);
