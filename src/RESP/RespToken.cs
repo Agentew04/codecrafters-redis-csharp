@@ -34,11 +34,11 @@ public abstract class RespToken {
         }
         if (resp[0] == '$') {
             // check if it ends with \r\n(if yes is a bulkstring token, if no file Token)
-            if (resp[^2] == '\r' && resp[^1] == '\n') {
+            //if (resp[^2] == '\r' && resp[^1] == '\n') {
                 return new BulkStringToken().FromRESP(resp, out endIndex);
-            } else {
-                return new FileToken().FromRESP(resp, out endIndex);
-            }
+            //} else {
+                //return new FileToken().FromRESP(resp, out endIndex);
+            //}
         }
         if (resp[0] == '*') {
             return new ArrayToken().FromRESP(resp, out endIndex);
