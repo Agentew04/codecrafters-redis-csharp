@@ -204,6 +204,8 @@ public static partial class Server {
         // receive fullresync
         bytesRead = await stream.ReadAsync(buffer);
         response = buffer[..bytesRead];
+        await Console.Out.WriteLineAsync("fullresync response: ");
+        await Console.Out.WriteLineAsync(Convert.ToHexString(response));
         respToken = RespToken.Parse(response, out int resyncEnd);
         Console.WriteLine($"Read: {bytesRead}, ResyncEnd: {resyncEnd}");
         if (respToken is not SimpleStringToken simpleStringToken4) {
