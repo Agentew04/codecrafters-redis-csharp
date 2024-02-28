@@ -12,6 +12,7 @@ namespace codecrafters_redis.src;
 public static partial class Server {
 
     public static async Task Main(string[] args) {
+
         ParseFlags(args);
         await Setup();
         

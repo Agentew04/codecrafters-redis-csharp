@@ -10,8 +10,12 @@ internal class SimpleStringToken : RespToken {
     public string Value { get; set; } = "";
 
     public override RespToken FromRESP(byte[] resp, out int endIndex) {
-        Value = resp[1..^2].FromAscii();
-        endIndex = resp.Length;
+        int index = 1;
+        while (resp[index] != '\r') {
+            index++;
+        }
+        Value = resp[1..index].FromAscii();
+        endIndex = index + 2;
         return this;
     }
 
