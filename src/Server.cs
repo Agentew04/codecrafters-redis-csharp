@@ -222,7 +222,7 @@ public static partial class Server {
 
         // extract rdb file
         if(bytesRead > resyncEnd) {
-            byte[] token = response[(resyncEnd + 2)..];
+            byte[] token = response[(resyncEnd)..];
             respToken = new FileToken().FromRESP(token, out _);
             if (respToken is not FileToken fileToken) {
                 await Console.Out.WriteLineAsync($"is not file token! type: {respToken.GetType().Name}");
