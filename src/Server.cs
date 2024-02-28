@@ -56,7 +56,7 @@ public static partial class Server {
             Console.Write("Command: ");
             Console.WriteLine(string.Join(" ", args));
             
-
+            masterSemaphore.Wait();
             var cmd = args[0];
             if (cmd == "ping") {
                 await PingCommand(stream);
@@ -76,6 +76,7 @@ public static partial class Server {
             } else {
                 await Console.Out.WriteLineAsync("Command not found");
             }
+            masterSemaphore.Release();
         } while(bytesRead > 0);
         client.Close();
     }
@@ -117,6 +118,7 @@ public static partial class Server {
     }
 
     private static async Task Setup() {
+        masterSemaphore = new(1, 1);
         if (isMaster) {
             masterReplId = Convert.ToHexString(RandomNumberGenerator.GetBytes(20));
             masterReplOffset = 0;
@@ -255,8 +257,9 @@ public static partial class Server {
                 await Console.Out.WriteLineAsync("Closing connection");
                 break;
             }
-            byte[] request = buffer[..bytesRead];
 
+            masterSemaphore.Wait();
+            byte[] request = buffer[..bytesRead];
             var reqToken = RespToken.Parse(request, out _);
 
             if (reqToken is not ArrayToken arrayToken) {
@@ -290,6 +293,7 @@ public static partial class Server {
             } else {
                 await Console.Out.WriteLineAsync("Master Command not found");
             }
+            masterSemaphore.Release();
         } while (bytesRead > 0);
         client.Close();
     }

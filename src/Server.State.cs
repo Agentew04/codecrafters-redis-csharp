@@ -13,6 +13,7 @@ public static partial class Server {
 
     private static int port;
     private static readonly Dictionary<string, (string value, DateTime? expiry)> _data = new();
+    private static SemaphoreSlim masterSemaphore = new(1,1);
 
     #endregion
 
