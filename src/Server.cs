@@ -217,28 +217,22 @@ public static partial class Server {
         masterReplId = simpleStringToken4.Value.Split(' ')[1];
         await Console.Out.WriteLineAsync($"received fullresync, replid: {masterReplId}");
 
-        // receive rdb file
-        bytesRead = await stream.ReadAsync(buffer);
-        Console.WriteLine(Convert.ToHexString(buffer));
-        if(bytesRead > 0) {
-            await Console.Out.WriteLineAsync($"received rdb file, size: {bytesRead}");
-
-            response = buffer[..bytesRead];
-            Console.WriteLine($"response size: {response.Length}");
-            respToken = RespToken.Parse(response, out _);
+        // extract rdb file
+        if(bytesRead > resyncEnd) {
+            byte[] token = response[(resyncEnd + 2)..];
+            respToken = RespToken.Parse(token, out _);
             if (respToken is not FileToken fileToken) {
                 await Console.Out.WriteLineAsync($"is not file token! type: {respToken.GetType().Name}");
                 if(respToken is BulkStringToken tkn) {
                     await Console.Out.WriteLineAsync($"string: {tkn.Value}");
                 }
                 return;
-            }else {
-                await Console.Out.WriteLineAsync($"is file token! size: {fileToken.Length}");
             }
-
+            await Console.Out.WriteLineAsync("received rdb file with full resync");
+            await Console.Out.WriteLineAsync("Applied RDB file");
             Rdb.SaveFile(fileToken.Content);
         }
-
+       
         // send connection to main handler loop
         await Console.Out.WriteLineAsync("Sending master connection to Handler");
         HandleMaster(tcpClient); // do not await
