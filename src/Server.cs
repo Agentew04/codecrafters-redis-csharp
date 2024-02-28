@@ -219,8 +219,10 @@ public static partial class Server {
 
         // receive rdb file
         bytesRead = await stream.ReadAsync(buffer);
+        Console.WriteLine(Convert.ToHexString(buffer));
         if(bytesRead > 0) {
             await Console.Out.WriteLineAsync($"received rdb file, size: {bytesRead}");
+
             response = buffer[..bytesRead];
             Console.WriteLine($"response size: {response.Length}");
             respToken = RespToken.Parse(response, out _);
